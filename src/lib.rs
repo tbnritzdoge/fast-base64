@@ -138,7 +138,7 @@ pub fn decode_to_slice<R: AsRef<[u8]>, W: AsMut<[u8]>>(
   input: R,
   output: &mut W,
 ) -> Result<usize, Error> {
-  decode_to_slice_inner(&STANDARD_DECODE_TABLE, input, output)
+  decode_to_slice_inner(&DECODE_TABLE, input, output)
 }
 
 #[inline]
@@ -286,7 +286,7 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
 
 #[inline]
 pub fn encode_to_slice<D: AsRef<[u8]>, W: AsMut<[u8]>>(input: D, output: &mut W) {
-  encode_to_slice_inner(&STANDARD_TABLE, input, output);
+  encode_to_slice_inner(&TABLE, input, output);
 }
 
 #[inline]
