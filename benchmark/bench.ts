@@ -1,4 +1,3 @@
-import s from '64'
 import b from 'benny'
 
 import { decode, encode } from '../index'
@@ -21,9 +20,6 @@ async function run1() {
     b.add('atob', () => {
       atob(buff2)
     }),
-    b.add('64 (npm)', () => {
-      s.decode(buff).toString()
-    }),
 
     b.cycle(),
     b.complete(),
@@ -40,9 +36,6 @@ async function run2() {
 
     b.add('btoa', () => {
       btoa(str2)
-    }),
-    b.add('64 (npm)', () => {
-      s.encode(str).toString()
     }),
 
     b.cycle(),

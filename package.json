@@ -55,7 +55,6 @@
     "version": "napi version"
   },
   "devDependencies": {
-    "64": "^0.2.0",
     "@napi-rs/cli": "^1.0.4",
     "@swc-node/register": "^1.2.1",
     "@typescript-eslint/eslint-plugin": "^4.22.1",
