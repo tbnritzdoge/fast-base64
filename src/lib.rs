@@ -65,26 +65,35 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 fn init(mut exports: JsObject) -> JsResult<()> {
   exports.create_named_method("decode", js_decode)?;
   exports.create_named_method("encode", js_encode)?;
+  exports.create_named_method("url_decode", js_url_decode)?;
+  exports.create_named_method("url_encode", js_url_encode)?;
   Ok(())
 }
 #[js_function(1)]
 fn js_decode(ctx: CallContext) -> JsResult<JsString> {
-  let argument: Vec<u8> = ctx.get::<JsBuffer>(0)?.into_value()?.to_vec();
-  let returned = decode(argument);
-  match returned {
-    Ok(value) => {
-      let string = unsafe { std::str::from_utf8_unchecked(&value) };
-      ctx.env.create_string(&string)
-    }
-    Err(err) => Err(JsError::from_reason(format!("{:?}", err))),
+  let input: Vec<u8> = ctx.get::<JsBuffer>(0)?.into_value()?.to_vec();
+  if input.is_empty() {
+    return Err(JsError::from_reason("empty buffer provided".to_owned()));
   }
+  let olen = decode_buffer_len(input.len());
+  let mut output = vec![0u8; olen];
+  let amt = match decode_to_slice(input, &mut output) {
+    Ok(v) => v,
+    Err(err) => return Err(JsError::from_reason(format!("{:?}", err))),
+  };
+  if amt < olen {
+    output.truncate(amt);
+  }
+  ctx
+    .env
+    .create_string(&unsafe { std::str::from_utf8_unchecked(&output) })
 }
 
 #[js_function(1)]
 fn js_encode(ctx: CallContext) -> JsResult<JsString> {
   let input: Vec<u8> = ctx.get::<JsBuffer>(0)?.into_value()?.to_vec();
   if input.is_empty() {
-    return ctx.env.create_string("");
+    return Err(JsError::from_reason("empty buffer provided".to_owned()));
   }
 
   let mut output = vec![b'='; encode_buffer_len(input.len())];
@@ -94,43 +103,71 @@ fn js_encode(ctx: CallContext) -> JsResult<JsString> {
     .env
     .create_string(unsafe { std::str::from_utf8_unchecked(&output) })
 }
+#[js_function(1)]
+fn js_url_encode(ctx: CallContext) -> JsResult<JsString> {
+  let input: Vec<u8> = ctx.get::<JsBuffer>(0)?.into_value()?.to_vec();
+  if input.is_empty() {
+    return Err(JsError::from_reason("empty buffer provided".to_owned()));
+  }
+
+  let ilen = input.len();
+  let olen = encode_buffer_len(ilen);
+
+  let mut output = vec![b'='; olen];
+
+  urlsafe_encode_to_slice(input, &mut output);
+
+  ctx
+    .env
+    .create_string(unsafe { std::str::from_utf8_unchecked(&output) })
+}
+
+#[js_function(1)]
+fn js_url_decode(ctx: CallContext) -> JsResult<JsString> {
+  let input: Vec<u8> = ctx.get::<JsBuffer>(0)?.into_value()?.to_vec();
+  if input.is_empty() {
+    return ctx.env.create_string(&"");
+  }
+  let olen = decode_buffer_len(input.len());
+  let mut output = vec![0u8; olen];
+  let amt = match urlsafe_decode_to_slice(input, &mut output) {
+    Ok(v) => v,
+    Err(err) => return Err(JsError::from_reason(format!("{:?}", err))),
+  };
+  if amt < olen {
+    output.truncate(amt);
+  }
+  ctx
+    .env
+    .create_string(&unsafe { std::str::from_utf8_unchecked(&output) })
+}
+
+#[inline]
+pub fn urlsafe_encode_to_slice<D: AsRef<[u8]>, W: AsMut<[u8]>>(input: D, output: &mut W) {
+  encode_to_slice_inner(&URL_TABLE, input, output);
+}
 
 #[inline]
 pub fn decode_buffer_len(ilen: usize) -> usize {
   let n = ilen / 4;
   let r = ilen % 4;
 
-  let olen = if r > 0 { n * 3 + 3 } else { n * 3 };
-
-  olen
+  if r > 0 { n * 3 + 3 } else { n * 3 }
 }
 
 #[inline]
 pub fn encode_buffer_len(ilen: usize) -> usize {
   let n = ilen / 3;
   let r = ilen % 3;
-  let olen = if r > 0 { n * 4 + 4 } else { n * 4 };
-
-  olen
+  if r > 0 { n * 4 + 4 } else { n * 4 }
 }
 
-pub fn decode<D: AsRef<[u8]>>(input: D) -> Result<Vec<u8>, Error> {
-  let input = input.as_ref();
-  if input.is_empty() {
-    return Ok(Vec::new());
-  }
-
-  let ilen = input.len();
-  let olen = decode_buffer_len(ilen);
-
-  let mut output = vec![0u8; olen];
-
-  let amt = decode_to_slice(input, &mut output)?;
-  if amt < olen {
-    output.truncate(amt);
-  }
-
-  Ok(output)
+#[inline]
+pub fn urlsafe_decode_to_slice<R: AsRef<[u8]>, W: AsMut<[u8]>>(
+  input: R,
+  output: &mut W,
+) -> Result<usize, Error> {
+  decode_to_slice_inner(&URL_DECODE, input, output)
 }
 
 #[inline]
@@ -142,6 +179,7 @@ pub fn decode_to_slice<R: AsRef<[u8]>, W: AsMut<[u8]>>(
 }
 
 #[inline]
+#[allow(clippy::just_underscores_and_digits)]
 fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
   table: &[u8; 256],
   input: R,
@@ -161,14 +199,14 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
   while ipos < ilen {
     let val = table[input[ipos] as usize];
     match val {
-      ____ => {
+      0xff => {
         return Err(Error {
           pos: ipos,
           byte: input[ipos],
           kind: ErrorKind::InvalidCodedCharacter,
         });
       }
-      _EXT => {
+      0xfe => {
         const MAX_PADDING_LEN: usize = 2;
 
         plen = 1;
@@ -176,11 +214,11 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
 
         while ipos < ilen {
           let val = table[input[ipos] as usize];
-          if val != _EXT || plen >= MAX_PADDING_LEN {
+          if val != 0xfe || plen >= MAX_PADDING_LEN {
             return Err(Error {
               pos: ipos,
               byte: input[ipos],
-              kind: if val != _EXT {
+              kind: if val != 0xfe {
                 ErrorKind::InvalidPaddingCharacter
               } else {
                 ErrorKind::InvalidPaddingLength
@@ -220,7 +258,7 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
             group |= (val as u32) << 8;
             let [b1, b2, b3, _] = group.to_be_bytes();
 
-            output[opos + 0] = b1;
+            output[opos] = b1;
             output[opos + 1] = b2;
             output[opos + 2] = b3;
 
@@ -248,7 +286,7 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
     12 => {
       let [b1, _, _, _] = group.to_be_bytes();
 
-      output[opos + 0] = b1;
+      output[opos] = b1;
 
       opos += 1;
 
@@ -264,7 +302,7 @@ fn decode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
     18 => {
       let [b1, b2, _, _] = group.to_be_bytes();
 
-      output[opos + 0] = b1;
+      output[opos] = b1;
       output[opos + 1] = b2;
 
       opos += 2;
@@ -304,9 +342,9 @@ fn encode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
 
   let mut i = 0usize;
   while i < n {
-    let num = u32::from_be_bytes([input[i * 3 + 0], input[i * 3 + 1], input[i * 3 + 2], 0]);
+    let num = u32::from_be_bytes([input[i * 3], input[i * 3 + 1], input[i * 3 + 2], 0]);
 
-    output[i * 4 + 0] = table[((num >> 26) & 0x3F) as usize];
+    output[i * 4] = table[((num >> 26) & 0x3F) as usize];
     output[i * 4 + 1] = table[((num >> 20) & 0x3F) as usize];
     output[i * 4 + 2] = table[((num >> 14) & 0x3F) as usize];
     output[i * 4 + 3] = table[((num >> 8) & 0x3F) as usize];
@@ -316,15 +354,15 @@ fn encode_to_slice_inner<R: AsRef<[u8]>, W: AsMut<[u8]>>(
   match r {
     0 => {}
     1 => {
-      let num = u32::from_be_bytes([input[i * 3 + 0], 0, 0, 0]);
+      let num = u32::from_be_bytes([input[i * 3], 0, 0, 0]);
 
-      output[i * 4 + 0] = table[((num >> 26) & 0x3F) as usize];
+      output[i * 4] = table[((num >> 26) & 0x3F) as usize];
       output[i * 4 + 1] = table[((num >> 20) & 0x3F) as usize];
     }
     2 => {
-      let num = u32::from_be_bytes([input[i * 3 + 0], input[i * 3 + 1], 0, 0]);
+      let num = u32::from_be_bytes([input[i * 3], input[i * 3 + 1], 0, 0]);
 
-      output[i * 4 + 0] = table[((num >> 26) & 0x3F) as usize];
+      output[i * 4] = table[((num >> 26) & 0x3F) as usize];
       output[i * 4 + 1] = table[((num >> 20) & 0x3F) as usize];
       output[i * 4 + 2] = table[((num >> 14) & 0x3F) as usize];
     }

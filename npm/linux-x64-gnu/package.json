@@ -1,5 +1,5 @@
 {
-  "name": "@doge/fast-base64-linux-x64-gnu",
+  "name": "@tbnritzdoge/fast-base64-linux-x64-gnu",
   "version": "1.0.0",
   "os": [
     "linux"

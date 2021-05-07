@@ -1,3 +1,3 @@
-# `@doge/fast-base64-linux-x64-gnu`
+# `@tbnritzdoge/fast-base64-linux-x64-gnu`
 
-This is the **x86_64-unknown-linux-gnu** binary for `@doge/fast-base64`
+This is the **x86_64-unknown-linux-gnu** binary for `@tbnritzdoge/fast-base64`

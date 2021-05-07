@@ -1,5 +1,5 @@
 {
-  "name": "@doge/fast-base64-win32-x64-msvc",
+  "name": "@tbnritzdoge/fast-base64-win32-x64-msvc",
   "version": "1.0.0",
   "os": [
     "win32"
