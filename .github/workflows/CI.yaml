@@ -128,7 +128,7 @@ jobs:
         shell: bash
 
       - name: 'Install dependencies'
-        run: yarn install --ignore-scripts --frozen-lockfile --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm i
 
       - name: 'Build'
         run: ${{ matrix.settings.build }}
@@ -171,7 +171,7 @@ jobs:
           key: npm-cache-test-${{ matrix.settings.target }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
 
       - name: 'Install dependencies'
-        run: yarn install --ignore-scripts --frozen-lockfile --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm i
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -212,7 +212,7 @@ jobs:
           key: npm-cache-test-linux-x64-gnu-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
 
       - name: 'Install dependencies'
-        run: yarn install --ignore-scripts --frozen-lockfile --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm i
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -253,7 +253,7 @@ jobs:
           key: npm-cache-test-x86_64-unknown-linux-musl-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
 
       - name: 'Install dependencies'
-        run: yarn install --ignore-scripts --frozen-lockfile --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm i
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -315,7 +315,7 @@ jobs:
             apt-get install -y nodejs && \
             npm install -g yarn
           run: |
-            yarn install --ignore-scripts --registry https://registry.npmjs.org --network-timeout 300000
+            npm i
             yarn test
             ls -la
 
@@ -366,7 +366,7 @@ jobs:
             apt-get install -y nodejs && \
             npm install -g yarn
           run: |
-            yarn install --ignore-scripts --registry https://registry.npmjs.org --network-timeout 300000
+            npm i
             yarn test
             ls -la
 
@@ -397,7 +397,7 @@ jobs:
           restore-keys: |
             npm-cache-
       - name: 'Install dependencies'
-        run: yarn install --ignore-scripts --frozen-lockfile --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm i
 
       - name: Download all artifacts
         uses: actions/download-artifact@v2
