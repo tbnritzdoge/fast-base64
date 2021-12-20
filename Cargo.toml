@@ -10,7 +10,7 @@ version = "0.1.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = "1"
+napi = "2"
 napi-derive = "1"
 
 [target.'cfg(all(unix, not(target_env = "musl"), not(target_arch = "aarch64"), not(target_arch = "arm")))'.dependencies]
