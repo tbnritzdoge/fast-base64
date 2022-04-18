@@ -58,7 +58,7 @@
     "@napi-rs/cli": "^2.6.2",
     "@swc-node/register": "^1.4.2",
     "@typescript-eslint/eslint-plugin": "^5.18.0",
-    "@typescript-eslint/parser": "^5.18.0",
+    "@typescript-eslint/parser": "^5.19.0",
     "ava": "^4.2.0",
     "benny": "^3.7.1",
     "chalk": "^5.0.1",
