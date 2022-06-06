@@ -59,7 +59,7 @@
     "@swc-node/register": "^1.5.1",
     "@typescript-eslint/eslint-plugin": "^5.26.0",
     "@typescript-eslint/parser": "^5.26.0",
-    "ava": "^4.2.0",
+    "ava": "^4.3.0",
     "benny": "^3.7.1",
     "chalk": "^5.0.1",
     "eslint": "^8.16.0",
