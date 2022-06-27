@@ -57,7 +57,7 @@
   "devDependencies": {
     "@napi-rs/cli": "^2.10.0",
     "@swc-node/register": "^1.5.1",
-    "@typescript-eslint/eslint-plugin": "^5.28.0",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.28.0",
     "ava": "^4.3.0",
     "benny": "^3.7.1",
